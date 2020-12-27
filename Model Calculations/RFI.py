@@ -1,8 +1,9 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 
 df_global = pd.DataFrame({
                             ('All', 'FY'):   [2020,     2021,    2022,   2023,   2024,   2025],
-                            ('All', 'CPIH'): [0.021,     0.015,   0.02,    0.02,   0.02,   0.02],
+                            ('All', 'CPIH'): [0.02,     0.02,   0.02,    0.02,   0.02,   0.02],
      })
 df_global.set_index(('All', 'FY'), drop=False, inplace=True)
 
@@ -16,6 +17,7 @@ for FY, CPIH in zip(df_global[('All', 'FY')], df_global[('All', 'CPIH')]):
     lst.append(z)
 df_global[('All', 'CPIH_culmulative')] = lst
 
+
 df_global[('All', 'CPIH_delta_shift1')] = df_global[('All', 'CPIH')].shift(-1)
 df_global[('All', 'CPIH_delta_shift2')] = df_global[('All', 'CPIH')].shift(-2)
 
@@ -25,8 +27,8 @@ df = pd.DataFrame({
     ('Water_resources', 'Bilateral_entry_adjustment'):      [0,        0,      0,       -3,     -3,       -3],
     ('Water_resources', 'K_factors'):                       [0,        0.03,   0.03,    0.03,   0.03,   0.03],
     ('Water_network', 'K_factors'):                         [0,        0.04,   0.04,    0.04,   0.04,   0.04],
-    ('Wastewater_network', 'K_factors'):                    [0,        0.05,   0.05,    0.05,   0.05,   0.05],
-    ('Wastewater_network', 'Actual_revenue'):               [0,        110,    120,     130,    140,    150],
+    ('Wastewater_network', 'K_factors'):                    [0,        0.0,   0.0,    0.0,   0.0,   0.0],
+    ('Wastewater_network', 'Actual_revenue'):               [0,        102.,    104.04,     106.1208,    108.2432,    110.4081],
     ('Water_network', 'Actual_revenue'):                    [0,        55,     60,      65,     70,     75],
     ('Water_resources', 'Actual_revenue'):                  [0,        55,     60,      65,     70,     75],
     ('Wastewater_network', 'Blind_year_profiling_factor'):  [0,        0,      0.25,    0.25,   0.25,   0.25],
@@ -57,7 +59,7 @@ Wastewater_Network_allowed_revenue = 100
 Water_Network_allowed_revenue = 50
 Water_resources_allowed_revenue = 50
 
-Wastewater_Network_total_blind_year_adjustment = 15
+Wastewater_Network_total_blind_year_adjustment = 0
 Water_Network_total_blind_year_adjustment = 15
 Water_resources_total_blind_year_adjustment = 15
 
@@ -69,6 +71,10 @@ allowed_revenues = [Wastewater_Network_allowed_revenue, Water_Network_allowed_re
 total_blind_year_adjustments = [Wastewater_Network_total_blind_year_adjustment, Water_Network_total_blind_year_adjustment,
                                 Water_resources_total_blind_year_adjustment]
 K_factors = [df[('Wastewater_network', 'K_factors')], df[('Water_network', 'K_factors')], df[('Water_resources', 'K_factors')]]
+
+# SCENARIOS
+
+df.loc[2021, ('Wastewater_network', 'Actual_revenue')] = 97
 
 
 # CALCULATIONS
@@ -201,12 +207,47 @@ for year in df[('All', 'FY')]:
 df.sort_index(axis=1, inplace=True)
 df.drop([2020, 2026, 2027], inplace=True)
 
-#print(df.loc[:, ('Wastewater_network', 'RFI')])
+# END MODEL  (note - this hasn't worked out the years 4 and 5 adjustments...)
 
-print(df['Water_resources'].transpose())
+# ADDED VARIABLES FOR FURTHER ANALYSIS
 
+for control in controls:
+    df[(control, 'Outer_upper_bound')] = df[(control, 'Adjusted_allowed_revenue')] * (1 + Maximum_threshold)
+    df[(control, 'Outer_lower_bound')] = df[(control, 'Adjusted_allowed_revenue')] * (1 - Maximum_threshold)
+    df[(control, 'Inner_upper_bound')] = df[(control, 'Adjusted_allowed_revenue')] * (1 + Minimum_threshold)
+    df[(control, 'Inner_lower_bound')] = df[(control, 'Adjusted_allowed_revenue')] * (1 - Minimum_threshold)
+
+
+
+# DATA VISUALISATIONS
+
+# Scenarios:  Inflation = 2%;
+df[('Wastewater_network', 'Actual_revenue')] = df.apply(lambda row: row[('Wastewater_network', 'Adjusted_allowed_revenue')]
+                                               if row[('All', 'FY')]> 2021 else 100,
+                                                 axis=1)
+
+print(df.transpose())
 print(df[('Water_resources', 'RFI')].transpose())
 
 
+plt.style.use('seaborn')
+plt.plot(df[('Wastewater_network', 'Actual_revenue')], label='Actual revenue')
+plt.plot(df[('Wastewater_network', 'Allowed_revenue')], label='Original Allowed Revenue')
+plt.plot(df[('Wastewater_network', 'Adjusted_allowed_revenue')], label='Adjusted allowed Revenue')
+
+plt.fill_between(df.index, df[('Wastewater_network', 'Outer_upper_bound')],
+                           df[('Wastewater_network', 'Outer_lower_bound')], alpha=0.5)
+
+plt.fill_between(df.index, df[('Wastewater_network', 'Inner_upper_bound')],
+                           df[('Wastewater_network', 'Inner_lower_bound')], alpha=0.5)
+
+plt.xticks(df[('All', 'FY')])
+plt.legend()
+
+plt.show()
 
 
+
+
+print(df[('Wastewater_network', 'CPIH_K_culmulative')])
+print(df[('Wastewater_network', 'Adjusted_allowed_revenue')])
