@@ -60,7 +60,7 @@ Wastewater_Network_allowed_revenue = 100
 Water_Network_allowed_revenue = 50
 Water_resources_allowed_revenue = 50
 
-Wastewater_Network_total_blind_year_adjustment = 5
+Wastewater_Network_total_blind_year_adjustment = 0
 Water_Network_total_blind_year_adjustment = 15
 Water_resources_total_blind_year_adjustment = 15
 
@@ -134,13 +134,6 @@ for year in df[('All', 'FY')]:
                                                                       df.loc[year, (control, 'Blind_year_adjustment_inc_financing_inflation')] + \
                                                                       df.loc[year, (control, 'RFI')] + \
                                                                       df.loc[year, ('Water_resources', 'Bilateral_entry_adjustment')]
-
-                # Scenario - endogenous allowed revenue after year 1 shoch
-            df.loc[year, ('Wastewater_network', 'Actual_revenue')] = df.loc[year, ('Wastewater_network', 'Adjusted_allowed_revenue')] \
-                    if df.loc[year, ('All', 'FY')] > 2021 \
-                    else df.loc[year, ('Wastewater_network', 'Actual_revenue')]
-
-                # End of scenario
 
             df.loc[year, (control, 'Revenue_imbalance')] = df.loc[year, (control, 'Adjusted_allowed_revenue')] - \
                                                            df.loc[year, (control, 'Actual_revenue')]
@@ -216,6 +209,7 @@ for year in df[('All', 'FY')]:
 df.sort_index(axis=1, inplace=True)
 df.drop([2020, 2026, 2027], inplace=True)
 
+
 # END MODEL  (note - this hasn't worked out the years 4 and 5 adjustments...)
 
 # ADDED VARIABLES FOR FURTHER ANALYSIS
@@ -230,7 +224,7 @@ for control in controls:
 
 # DATA VISUALISATIONS
 
-print(df.transpose())
+print(df[('Water_network', 'Penalty_rate_adjustment_with_financing_inflation')])
 
 # LINE GRAPH
 
