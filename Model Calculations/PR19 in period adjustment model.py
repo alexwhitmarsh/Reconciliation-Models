@@ -1,7 +1,6 @@
 # THIS SHEET REPLICATES THE CALCULATIONS IN THE WATER RESOURCES SHEET IN THE MODEL
 
 import pandas as pd
-import numpy as np
 
 #  Payments to be applied this reporting year after abatements and deferrals
 
@@ -15,9 +14,9 @@ df = pd.DataFrame({
 })
 df.set_index('FY', drop=False, inplace=True)
 
+
 # Generate the culmulative series based on CPIH + K
 K_factors = [df.Water_resources_K_factors, df.Water_network_K_factors, df.Wastewater_network_K_factors]
-
 for i in K_factors:
     lst = []
     z = 1
@@ -58,30 +57,34 @@ Reporting_year = 2021
 # ODI PAYMENT
 
 # Sets
-
 Starting_revenue = [Water_resources, Water_network_plus, Wastewater_network_plus]
 
+Year_of_adjustment_to_be_applied = Reporting_year + 2
 
-def poop(control, K_factor):
-    global Year_of_adjustment_to_be_applied
-    Year_of_adjustment_to_be_applied = Reporting_year + 2
-    df['ODI_payment_for_this_control'] = df.FY.apply(lambda x: control # Water_resources
-    if x == Year_of_adjustment_to_be_applied
-    else 0)
-    # REVENUE ADJUSTMENTS
-    df['Allowed_revenue'] = Allowed_revenue_starting_point_in_FD * df.CPIH_K_culmulative
-    df['ODI_value_nominal_price'] = df.ODI_payment_for_this_control * df.CPIH_culmulative
-    # Tax adjustment
-    df['Total_value_of_ODI'] = df.ODI_value_nominal_price * (1 / (1 - df.Marginal_tax_rate))
-    df['Revised_total_nominal_revenue'] = df.Allowed_revenue + df.Total_value_of_ODI
-    # Revised K
-    df['Allowed_revenue_percentage_movement'] = df.Revised_total_nominal_revenue.pct_change()
-    df['Allowed_revenue_percentage_movement_deflated'] = df.apply(lambda row: row.Allowed_revenue_percentage_movement
-    if row.FY >= Year_of_adjustment_to_be_applied
-    else 0, axis=1)
-    df['Revised_K'] = df.Allowed_revenue_percentage_movement_deflated.round(2)  # this is simplyfied - the original calc did odd rounding up or down
+df['ODI_payment_for_this_control'] = df.FY.apply(lambda x: Water_resources
+                                        if x == Year_of_adjustment_to_be_applied
+                                        else 0)
 
 
-poop(Water_resources)
+# REVENUE ADJUSTMENTS
+
+df['Allowed_revenue'] = Allowed_revenue_starting_point_in_FD * df.CPIH_K_culmulative
+
+df['ODI_value_nominal_price'] = df.ODI_payment_for_this_control * df.CPIH_culmulative
+
+# Tax adjustment
+df['Total_value_of_ODI'] = df.ODI_value_nominal_price * (1 / (1 - df.Marginal_tax_rate))
+
+df['Revised_total_nominal_revenue'] = df.Allowed_revenue + df.Total_value_of_ODI
+
+# Revised K
+df['Allowed_revenue_percentage_movement'] = df.Revised_total_nominal_revenue.pct_change()
+
+df['Allowed_revenue_percentage_movement_deflated'] = df.apply(lambda row: row.Allowed_revenue_percentage_movement
+                                                    if row.FY >= Year_of_adjustment_to_be_applied
+                                                    else 0, axis=1)
+
+df['Revised_K'] = df.Allowed_revenue_percentage_movement_deflated.round(2)  # this is simplyfied - the original calc did odd rounding up or down
+
 
 print(df.tail())
