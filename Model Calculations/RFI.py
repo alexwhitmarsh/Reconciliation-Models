@@ -1,34 +1,58 @@
 import pandas as pd
 
+df_global = pd.DataFrame({
+                                    'FY':   [2020,     2021,    2022,   2023,   2024,   2025],
+                                    'CPIH':   [0.021,     0.015,   0.02,    0.02,   0.02,   0.02],
+     })
+df_global.set_index('FY', drop=False, inplace=True)
+
+# Generate the culmulative series based on CPIH
+lst = []
+z = 1
+for FY, CPIH in zip(df_global.FY, df_global.CPIH):
+    if FY > 2020:
+        z = z * (1 + CPIH)
+    else: z = 1
+    lst.append(z)
+df_global['CPIH_culmulative'] = lst
+
+df_global['CPIH_delta_shift1'] = df_global.CPIH.shift(-1)
+df_global['CPIH_delta_shift2'] = df_global.CPIH.shift(-2)
+
+
+
+print(df_global)
 
 df = pd.DataFrame({
                                     'FY':   [2020,     2021,    2022,   2023,   2024,   2025],
              'Water_resources_K_factors':   [0,        0.03,   0.03,    0.03,   0.03,   0.03],
                'Water_network_K_factors':   [0,        0.04,   0.04,    0.04,   0.04,   0.04],
           'Wastewater_network_K_factors':   [0,        0.05,   0.05,    0.05,   0.05,   0.05],
-                                  'CPIH':   [0.021,     0.015,   0.02,    0.02,   0.02,   0.02],
-                        'Actual_revenue':   [0,        110,    120,     130,    140,    150],
+     'Wastewater_Network_Actual_revenue':   [0,        110,    120,     130,    140,    150],
+          'Water_Network_Actual_revenue':   [0,        110,    120,     130,    140,    150],
+        'Water_resources_Actual_revenue':   [0,        110,    120,     130,    140,    150],
 'Wastewater_Network_Blind_year_profiling_factor':   [0,        0,      0.25,    0.25,   0.25,   0.25],
 'Water_Network_Blind_year_profiling_factor':        [0,        0,      0.25,    0.25,   0.25,   0.25],
 'Water_resources_Blind_year_profiling_factor':      [0,        0,      0.25,    0.25,   0.25,   0.25]
 })
-df.set_index('FY', drop=False, inplace=True)
 
-df['CPIH_delta_shift1'] = df.CPIH.shift(-1)
-df['CPIH_delta_shift2'] = df.CPIH.shift(-2)
+df2 = pd.DataFrame({
+    ('All', 'FY'):   [2020,     2021,    2022,   2023,   2024,   2025],
+    ('Water_resources', 'K_factors'):   [0,        0.03,   0.03,    0.03,   0.03,   0.03],
+    ('Water_network_K', 'factors'):   [0,        0.04,   0.04,    0.04,   0.04,   0.04],
+    ('Wastewater_network', 'K_factors'):   [0,        0.05,   0.05,    0.05,   0.05,   0.05],
+    ('Wastewater_Network', 'Actual_revenue'):   [0,        110,    120,     130,    140,    150],
+    ('Water_Network_Actual', 'revenue'):   [0,        110,    120,     130,    140,    150],
+    ('Water_resources', 'Actual_revenue'):   [0,        110,    120,     130,    140,    150],
+    ('Wastewater_Network', 'Blind_year_profiling_factor'):   [0,        0,      0.25,    0.25,   0.25,   0.25],
+    ('Water_Network', 'Blind_year_profiling_factor'):        [0,        0,      0.25,    0.25,   0.25,   0.25],
+    ('Water_resources', 'Blind_year_profiling_factor'):      [0,        0,      0.25,    0.25,   0.25,   0.25]
+})
+df2.set_index(('All', 'FY'), drop=False, inplace=True)
 
 
+print(df2.transpose())
 
-
-# Generate the culmulative series based on CPIH
-lst = []
-z = 1
-for FY, CPIH in zip(df.FY, df.CPIH):
-    if FY > 2020:
-        z = z * (1 + CPIH)
-    else: z = 1
-    lst.append(z)
-df['CPIH_culmulative'] = lst
 
 
 #  SCALARS
@@ -53,7 +77,7 @@ controls = ['Wastewater_Network', 'Water_Network', 'Water_resources']
 allowed_revenues = [Wastewater_Network_allowed_revenue, Water_Network_allowed_revenue, Water_resources_allowed_revenue]
 total_blind_year_adjustments = [Wastewater_Network_total_blind_year_adjustment, Water_Network_total_blind_year_adjustment,
                                 Water_resources_total_blind_year_adjustment]
-K_factors = [df.Water_resources_K_factors, df.Water_network_K_factors, df.Wastewater_network_K_factors]
+K_factors = [df.Wastewater_network_K_factors, df.Water_network_K_factors, df.Water_resources_K_factors]
 
 
 # CALCULATIONS
@@ -61,13 +85,19 @@ K_factors = [df.Water_resources_K_factors, df.Water_network_K_factors, df.Wastew
 # This creates the allowed revenues and blind year adjustents for each control
 
 
-# Generate the culmulative series based on CPIH + K
-
-
 for control, AR, total_blind_year_adjustment, i in zip(controls, allowed_revenues, total_blind_year_adjustments, K_factors):
+    lst = []
+    z = 1
+    for FY, K, CPIH in zip(df.FY, i, df.CPIH):
+        if FY > 2020:
+            z = z * (1 + K + CPIH)
+        else:
+            z = 1
+        lst.append(z)
+    df[control + '_CPIH_K_culmulative'] = lst
 
 
-    df[control + '_Allowed_revenue'] = df.apply(lambda row: AR * row.Wastewater_network_K_factors_CPIH_K_culmulative
+    df[control + '_Allowed_revenue'] = df.apply(lambda row: AR * row[control + '_CPIH_K_culmulative']
                                  if row.FY > 2020
                                  else 0, axis=1)
 
@@ -80,22 +110,13 @@ for control, AR, total_blind_year_adjustment, i in zip(controls, allowed_revenue
     df[control + '_Blind_year_adjustment_inc_financing_inflation'] = df[control + '_Blind_year_adjustment_inc_financing_rate'] * \
                                                         df['CPIH_culmulative']
 
-    lst = []
-    z = 1
-    for FY, K, CPIH in zip(df.FY, i, df.CPIH):
-        if FY > 2020:
-            z = z * (1 + K + CPIH)
-        else:
-            z = 1
-        lst.append(z)
-    df[control + '_CPIH_K_culmulative'] = lst
-
+print(df.transpose())
 
 # REVENUE ADJUSTMENT
 
 df['RFI'] = 0
 
-
+"""
 for i in df.FY:
     if i > 2020:
         df.loc[i, 'Adjusted_allowed_revenue'] = df.loc[i, 'Wastewater_Network_Allowed_revenue'] +\
@@ -146,3 +167,4 @@ for i in df.FY:
 
 
 print(df.Adjusted_allowed_revenue)
+"""
